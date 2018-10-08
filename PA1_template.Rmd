@@ -1,25 +1,123 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+author: "Jessica Scott"
+date: "October 7, 2018"
+output: html_document
 ---
+##Introduction  
+It is now possible to collect a large amount of data about personal movement
+using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone
+Up. These type of devices are part of the "quantified self" movement - a group
+of enthusiasts who take measurements about themselves regularly to improve
+their health, to find patterns in their behavior, or because they are tech geeks.
+But these data remain under-utilized both because the raw data are hard to
+obtain and there is a lack of statistical methods and software for processing and
+interpreting the data.  
+
+This assignment makes use of data from a personal activity monitoring device.
+This device collects data at 5 minute intervals through out the day. The data
+consists of two months of data from an anonymous individual collected during
+the months of October and November, 2012 and include the number of steps
+taken in 5 minute intervals each day.  
+
+##Getting and preprocessing the data  
+The URL for the data is accessed and the file is unzipped for access to the .csv.
+```{r echo=TRUE}
+url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(url, destfile = "activity.zip", mode = "wb")
+unzip("activity.zip")
+activity = read.csv("activity.csv", header=T, colClasses = c("integer", "character", 
+                                                             "integer") ,sep = ",")
+```
+We then explore the data a bit to get a better understanding. 
+```{r echo=TRUE}
+dim(activity)
+str(activity)
+```
+##Total steps per day
+This can be determined by manipulating the data into the activity by date
+```{r echo=TRUE}
+activity$date <- as.Date(activity$date)
+totalStepsbyDate <- aggregate(steps ~ date, activity,  FUN = sum)
+colnames(totalStepsbyDate) <- c("days" ,"steps")
+```
+and from this the histogram can be created relatively easily with the following:
+```{r echo=TRUE}
+hist(totalStepsbyDate$steps, main="Histogram of Total Steps Per Day", xlab = "Daily Steps",
+     col="blue")
+```
+
+The mean and median steps per day are calculated 
+```{r echo=TRUE}
+mean(totalStepsbyDate$steps)
+median(totalStepsbyDate$steps)
+```
+and show a mean of 10766.19 and median of 10765. In order to determine the average steps taken we have to aggregate the steps by interval.  
+```{r echo=FALSE}
+stepsAverage <- aggregate(steps ~ interval, activity, FUN = mean, na.rm = TRUE)
+colnames(stepsAverage) <- c("interval", "avg")
+```
+Creating the line plot after that is easy, just remember to indicate typ="l".
+```{r echo=TRUE}
+plot(stepsAverage, type="l")
+```
+
+To get the maximum average steps by interval we first calculate the maximum of the step averages by interval. Note that this will just give the maximum value but we are looking for the interval that the maximum value resides in.
+```{r echo=TRUE}
+maxAverage<-max(stepsAverage$avg)
+stepsAverage[stepsAverage$avg == maxAverage, ]
+```
+This indicates that interval 835 shows the maximum average which is approx 206.  
+
+##Missing values
+To better understand our results it makes sense to understand what is missing from the data set.
+```{r echo=TRUE}
+sum(is.na(activity$steps))
+```
+There are 2304 NAs or missing values in the activity data.  Since this could create bias, we will come up with a solution to fill in the missing values, which is by filling them in with the average values of each interval.
+```{r echo=TRUE}
+activity2 <- subset(activity, !is.na(activity$steps))
+dAta <- activity
+imPact <- is.na(dAta$steps)
+tAvg <- tapply(activity2$steps, activity2$interval, mean, na.rm = TRUE, simplify = T)
+dAta$steps[imPact] <- tAvg[as.character(dAta$interval[imPact])]
+totalStepsbyDate2 <- aggregate(steps ~ date, dAta, FUN = sum)
+par(mar = c(5,8,3,1))
+```
+Then we will work to plot our updated data set, "totalStepsbyDate2" as a histogram.
+```{r echo=TRUE}
+hist(totalStepsbyDate2$steps, col = "green", xlab = "Daily Steps", main = "Histogram 
+     of Total Steps Per Day")
+hist(totalStepsbyDate$steps, col = "blue", xlab = "Daily Steps", main = "Histogram of 
+     Total Steps Per Day", add=T) 
+legend("topleft", c("Imputed", "NA"), fill = c("green","blue"))
+```
+
+The plot shows where the imputed values diverge from the original plot.  
+
+##Check the revised data set
+We will do this by first checking the mean and median and comparing them to the previous values.
+```{r echo=TRUE}
+mean(totalStepsbyDate2$steps)
+median(totalStepsbyDate2$steps)
+```
+These values are 10766.19 and 10766.19, respectively.  Only the median differs slightly from the original value for median which was 10765.  
+
+##Weekdays and weekends
+Now we will compute the steps by weekend and weekday to gain more insight on activity.  This is done by creating a new factor variable.
+```{r echo=TRUE}
+dAta$date <- as.Date(dAta$date)
+dAta$day <- weekdays(dAta$date)
+dAta$weekend <- as.factor(ifelse(dAta$day == "Saturday" | dAta$day == "Sunday", 
+                                      "weekend", "weekday"))
+```
+Then we can creat a panel plot to decipher activity patterns.
+```{r echo=TRUE}
+library(lattice)
+plotdata <- aggregate(steps ~ interval + weekend, dAta, mean)
+xyplot(steps ~ interval | factor(weekend), data=plotdata, type="l", aspect = 1/2)
+```
 
 
-## Loading and preprocessing the data
 
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
