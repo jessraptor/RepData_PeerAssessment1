@@ -3,6 +3,8 @@
 url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
 download.file(url, destfile = "activity.zip", mode = "wb")
 unzip("activity.zip")
+activity = read.csv("activity.csv", header=T, colClasses = c("integer", "character", 
+                                                             "integer") ,sep = ",")
 
 ##Explore data
 
